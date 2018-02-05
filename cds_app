@@ -1,0 +1,481 @@
+import wx
+import re
+import shutil  
+from cds_begin_end import Return1
+from cds_combine_class import Combine
+from turn_cds_amino import Turn_Cds_Amino
+class MyFrame(wx.Frame):
+    def __init__(self):
+        wx.Frame.__init__(self,None,-1,"CDS",pos=(200,200),size=(400,350))
+        self.panel=wx.Panel(self)
+        """框架"""
+        self.text=wx.TextCtrl(self.panel,-1,pos=(10,30),size=(360,200),style=wx.TE_MULTILINE)
+        #"""在combobox中加入选项"""
+        #self.com_choices=['AMINO','CDS']
+        self.up_text=wx.TextCtrl(self.panel,-1,pos=(10,240),size=(295,30),style=wx.TE_MULTILINE)
+        
+        #self.button_up=wx.Button(self.panel,-1,"导入",pos=(280,240),size=(40,30))
+        self.button_begin=wx.Button(self.panel,-1,"开始",pos=(310,240),size=(60,30))
+        
+        
+        self.menubar=wx.MenuBar()
+        self.menu1=wx.Menu()
+        self.menu2=wx.Menu()
+        self.menu3=wx.Menu()
+        """STEP3在菜单下面，建立选项栏，使用Append（-1，“name”）"""
+        self.m1open=self.menu1.Append(-1,"Open")
+        self.m1save=self.menu1.Append(-1,"Save")
+        self.m2about=self.menu2.Append(-1,"About")
+        self.m3cds_amino=self.menu3.Append(-1,"Change Cds To Amino")
+        self.m3codon_bias=self.menu3.Append(-1,"Bar Of Codon Bias")
+        """STEP4将建好的菜单添加到菜单栏下面去，使用Append(菜单，“name”)"""
+        self.menubar.Append(self.menu1,"FILE")
+        self.menubar.Append(self.menu2,"HELP")
+        self.menubar.Append(self.menu3,"Other")
+        """STEP5将菜单栏设置到主窗口中，使用SetMenuBar（）"""
+        self.SetMenuBar(self.menubar)
+        
+        """绑定"""
+        self.menu1.Bind(wx.EVT_MENU,self.Onopen,self.m1open)
+        self.menu1.Bind(wx.EVT_MENU,self.Onsave_menu,self.m1save)
+        self.button_begin.Bind(wx.EVT_BUTTON,self.OnBegin)
+        #self.button_up.Bind(wx.EVT_BUTTON,self.Onup_button)
+        
+        """子窗口绑定，既是点击菜单中other中Change Cds To Amino便会响应函数：
+        self.On_windows_cds_amino，该函数设有wx.Dialog,能够创建子窗口
+        """
+        self.menu3.Bind(wx.EVT_MENU,self.On_windows_cds_amino,self.m3cds_amino)
+        self.menu3.Bind(wx.EVT_MENU,self.On_windows_codon_bias,self.m3codon_bias)
+        self.menu2.Bind(wx.EVT_MENU,self.Onhelp,self.m2about)
+        
+        
+        """自由缩放"""
+        """下面为布局管理，表示的是使得窗口能够进行自由大小的缩放，首先将其分为两部分
+        先生成一个hbox，用于管理上面一部分，下面一部分有三个小部分：（combobox,begin,save）
+        再生成一个vbox用于管理下面一部分，既是text部分。
+        proportion用于分配比例，combobox为1，表示占到最大，为0表示最小。
+        flag用于控制其形状大小等，如EXPAND表示它可以扩展拉伸
+        """
+        hbox=wx.BoxSizer()
+        hbox.Add(self.up_text,proportion=1,flag=wx.EXPAND|wx.LEFT|wx.RIGHT)
+        hbox.Add(self.button_begin,proportion=0,flag=wx.EXPAND|wx.RIGHT|wx.LEFT)
+        #hbox.Add(self.button_up,proportion=0,flag=wx.EXPAND|wx.RIGHT|wx.LEFT)
+
+        """增加wx.VERTICAL表示上下布局，不加为左右布局
+        因为hbox表示上部分，所以先添加，contents在下面，所以后添加。如果添加反了，其出现的位置也反了
+        """
+        vbox=wx.BoxSizer(wx.VERTICAL)
+        vbox.Add(self.text,proportion=1,flag=wx.EXPAND|wx.ALL)
+        vbox.Add(hbox,proportion=0,flag=wx.EXPAND|wx.ALL,border=5)
+
+        """这里使用panel.SetSizer使得上面的布局控制生效，由于两个布局最后都是添加在vbox中
+        所以使得vbox生效即可。
+        """
+        self.panel.SetSizer(vbox)
+    def Onhelp(self,event):
+        """子窗口界面创建wx.Dialog，在self.panel下面"""
+        self.dialog_main_help=wx.Dialog(self.panel,-1,title="Help",pos=(100,100),size=(600,500))
+        """创建好之后，便是在，self.dialog_main_help下构建控件"""
+        """图片构建
+        image = wx.Image('C:\\Users\\luo xi yang\\Desktop\\临时\\ship.png',wx.BITMAP_TYPE_PNG)
+        temp = image.ConvertToBitmap()
+        size = self.help_list.GetMinWidth(),self.help_list.GetMinHeight()
+        wx.StaticBitmap(self.help_list,bitmap=temp)
+        """
+        #self.help_list=wx.ListBox(self.dialog_main_help,-1,pos=(50,30),size=(700,500))
+        listDatas = ['这个软件可以帮助你从sequence.gb中提取到CDS文件，并且可以计算相应的氨基酸序列和密码子使用频率','使用步骤:','1、先将下载好的sequence.gb文件点击“开始”按钮导入。',
+        '2、第二步：等待计算得到所有CDS序列','3、点击菜单“FILE”中SAVE将CDS序列逐条保存（每一个cds序列是保存在单独的txt文件中的）','其他事项：',
+        '\t在菜单栏：Other中：change cds to amino是将提取的cds转变为氨基酸序列','\t使用方法是：先点击update导入cds.txt；再点击begin显示出氨基酸序列；最后点击save保存',
+        '\t在菜单栏：Otehr中：bar of condo bias是计算cds中密码子的使用频率','\t使用方法是先点击update导入cds.txt；再点击begin显示出cds密码子以及使用频率；最后点击save保存','\n\t注意',
+        '\t在主菜单中FILE中Open是打开genbank文件，只具有显示功能','\t若要得到ganbank中的cds序列，需要先导入，再点击开始得到，点击保存']
+        self.help_listBox = wx.ListBox(self.dialog_main_help, -1, pos=(20, 20), size=(5500, 400), choices=listDatas, style=wx.LB_SINGLE)
+        #self.help_listBox.SetFont(self.textFont)
+        
+        """显示子窗口"""
+        self.dialog_main_help.ShowModal()
+        
+    def On_windows_cds_amino(self,event):
+        """子窗口界面创建wx.Dialog，在self.panel下面"""
+        self.dialog = wx.Dialog(self.panel,-1,title="Change Cds To Amino",pos=(200,200),size=(800,600))
+        """创建好之后，便是在，self.dialog下构建控件"""
+        self.cw_cds_amino_text_name=wx.TextCtrl(self.dialog,-1,pos=(20,10),size=(680,30),style=wx.TE_MULTILINE)
+        self.cw_cds_amino_text=wx.TextCtrl(self.dialog,-1,pos=(20,50),size=(680,450),style=wx.TE_MULTILINE)
+        self.cw_cds_amino_text_status=wx.TextCtrl(self.dialog,-1,pos=(20,510),size=(680,30),style=wx.TE_MULTILINE)
+        self.cw_cds_amino_button_up=wx.Button(self.dialog,-1,"Update",pos=(710,10),size=(70,30))
+        self.cw_cds_amino_button_begin=wx.Button(self.dialog,-1,"Begin",pos=(710,50),size=(70,30))
+        self.cw_cds_amino_button_save=wx.Button(self.dialog,-1,"Save",pos=(710,510),size=(70,30))
+        
+        """子窗口再绑定事件"""
+        self.cw_cds_amino_button_up.Bind(wx.EVT_BUTTON,self.On_cw_cds_amino_button_update)
+        self.cw_cds_amino_button_begin.Bind(wx.EVT_BUTTON,self.On_cw_cds_amino_button_begin)
+        self.cw_cds_amino_button_save.Bind(wx.EVT_BUTTON,self.On_cw_cds_amino_button_save)
+        
+        
+        """显示子窗口"""
+        self.dialog.ShowModal()
+        
+    """导入CDS序列并在子窗口显示程序"""  
+    def On_cw_cds_amino_button_update(self,event):
+        self.cw_cds_amino_text.Clear()
+        with wx.FileDialog(self,"Open file",wildcard="Text files (*.txt)|*.txt",style=wx.FD_OPEN|wx.FD_FILE_MUST_EXIST) as fileDialog:
+            if fileDialog.ShowModal()==wx.ID_OK:
+                pathname_open=fileDialog.GetPath()
+                #print(pathname_open)
+                """使用open读入文件，AppendText将列表中所有字符都显示出来，而SetValue是逐行显示
+                最终只显示列表中的最后一个字符"""
+                fp=open(pathname_open,'r')
+                tempstr=fp.readlines()
+                print(tempstr)
+                for line in tempstr:
+                    self.cw_cds_amino_text.AppendText(line)
+                fp.close()
+        self.update_v=self.cw_cds_amino_text_status.SetValue(self.cw_cds_amino_text.GetValue())
+    """使用导入的CDS序列进行密码子向氨基酸序列的翻译程序"""  
+    def On_cw_cds_amino_button_begin(self,event):
+        cds_sequence=self.cw_cds_amino_text.GetValue()
+        #print('阶段性测试组：cds_sequence\n',str(cds_sequence))
+        cds_sequence_list=[]
+        for pp in cds_sequence:
+            cds_sequence_list.append(pp)
+        #print('观测当前CDS值是否为一维列表，如是则可以导入函数中计算\n',str(cds_sequence_list))
+        TA=Turn_Cds_Amino(cds_sequence_list)
+        amino_sequence=TA.turn_cds_to_amino()
+        #print('阶段性测试组：amino\n',str(amino_sequence))
+        self.cw_cds_amino_text.SetValue(amino_sequence)
+        self.cw_cds_amino_text_status.Clear()
+        self.begin_v=self.cw_cds_amino_text_status.SetValue(self.cw_cds_amino_text.GetValue())
+    """保存翻译好的氨基酸序列"""
+    def On_cw_cds_amino_button_save(self,event):
+        with wx.FileDialog(self,"Save file",wildcard="Text file (*.txt)|*.txt",style=wx.FD_SAVE) as fileDialog:
+            if fileDialog.ShowModal()==wx.ID_OK:
+                pathname=fileDialog.GetPath()
+                print(pathname)
+                """这里依然使用open的方法来写文件，使用了GetNumberOfLines()来记录
+                文本的行数，使用GetLineText(i)来得到每一行的文本值"""
+                fp=open(pathname,'w')
+                number1=self.cw_cds_amino_text.GetNumberOfLines()
+                for i in range(number1):
+                    v=self.cw_cds_amino_text_status.GetLineText(i)
+                    fp.write(v)
+                    #fp.write("\n")#换行
+                fp.close()#关闭文件
+                
+    """密码子偏好性codon bias 子窗口"""
+    def On_windows_codon_bias(self,event):
+        """子窗口界面创建wx.Dialog，在self.panel下面"""
+        self.dialog1 = wx.Dialog(self.panel,-1,title="Codon Bias",pos=(200,200),size=(800,600))
+        """创建好之后，便是在，self.dialog下构建控件"""
+        self.cw_codon_bias_text_name=wx.TextCtrl(self.dialog1,-1,pos=(20,10),size=(680,30),style=wx.TE_MULTILINE)
+        self.cw_codon_bias_text=wx.TextCtrl(self.dialog1,-1,pos=(20,50),size=(680,450),style=wx.TE_MULTILINE)#wx.TE_DONTWRAP:水平滑条
+        self.cw_codon_bias_text_status=wx.TextCtrl(self.dialog1,-1,pos=(20,510),size=(600,30),style=wx.TE_MULTILINE)
+        self.cw_codon_bias_choose=['red','blue','green','yellow','m','black','gray']
+        self.cw_codon_bias_combobox=wx.ComboBox(self.dialog1,-1,pos=(630,510),size=(70,40),choices=self.cw_codon_bias_choose)
+        """这里使用SetSelect（0）将选项中第一个显示出来"""
+        self.cw_codon_bias_combobox.SetSelection(0)
+        self.cw_codon_bias_button_up=wx.Button(self.dialog1,-1,"Update",pos=(710,10),size=(70,30))
+        self.cw_codon_bias_button_begin=wx.Button(self.dialog1,-1,"Begin",pos=(710,50),size=(70,30))
+        self.cw_codon_bias_button_save=wx.Button(self.dialog1,-1,"Save",pos=(710,510),size=(70,30))
+        """子窗口再绑定事件"""
+        self.cw_codon_bias_button_up.Bind(wx.EVT_BUTTON,self.On_cw_codon_bias_button_update)
+        self.cw_codon_bias_button_begin.Bind(wx.EVT_BUTTON,self.On_cw_codon_bias_button_begin)
+        self.cw_codon_bias_button_save.Bind(wx.EVT_BUTTON,self.On_cw_codon_bias_button_save)
+        self.cw_codon_bias_combobox.Bind(wx.EVT_COMBOBOX,self.On_cw_codon_bias_button_begin)
+        
+        """显示子窗口"""
+        self.dialog1.ShowModal()
+        
+    def On_cw_codon_bias_button_update(self,event):
+        self.cw_codon_bias_text.Clear()
+        with wx.FileDialog(self,"Open file",wildcard="Text files (*.txt)|*.txt",style=wx.FD_OPEN|wx.FD_FILE_MUST_EXIST) as fileDialog:
+            if fileDialog.ShowModal()==wx.ID_OK:
+                pathname_open=fileDialog.GetPath()
+                #print(pathname_open)
+                """使用open读入文件，AppendText将列表中所有字符都显示出来，而SetValue是逐行显示
+                最终只显示列表中的最后一个字符"""
+                fp=open(pathname_open,'r')
+                tempstr=fp.readlines()
+                print(tempstr)
+                for line in tempstr:
+                    self.cw_codon_bias_text.AppendText(line)
+                fp.close()
+        #self.cw_codon_bias_text_status.SetValue('请先在下面一栏空格中填写基因名称(英文)，再点击“Begin”按钮以进行密码子偏好性分析，以方便密码子偏好性的绘图：')
+        self.update_v2=self.cw_codon_bias_status.SetValue(self.cw_codon_bias_text.GetValue())
+        
+    def On_cw_codon_bias_button_begin(self,event):
+        cds_sequence=self.cw_codon_bias_text.GetValue()
+        #print('阶段性测试组：cds_sequence\n',str(cds_sequence))
+        cds_sequence_list=[]
+        for pp in cds_sequence:
+            cds_sequence_list.append(pp)
+        #print('观测当前CDS值是否为一维列表，如是则可以导入函数中计算\n',str(cds_sequence_list))
+        TA=Turn_Cds_Amino(cds_sequence_list)
+        amino_sequence=TA.turn_cds_to_amino()
+        #print('阶段性测试组：amino\n',str(amino_sequence))
+        
+        """计算每一种密码子出现的次数"""
+        number_coding=TA.number_coding_use()
+        print("\n\n\t\t\t\tthe number that a kind of coding from CDS sequence was:\n\n\n")
+        print(number_coding)
+
+        """计算出每一种密码子出现的频率"""
+        frequency=TA.frequency_coding_use()
+        print("\n\n\t\t\t\tthe frequency that a kind of coding from CDS sequence was:\n\n\n")
+        print(frequency)
+
+        """将字典值列表化"""
+        codon,number,frequencies=[],[],[]
+        for index,value in number_coding.items():
+            codon.append(index)#密码子
+            number.append(value)#个数
+        for value1 in frequency.values():
+            frequencies.append(value1)#频率
+        #print(codon)
+        fk=frequency.keys()
+        fk=list(fk)
+        #print('键\n',str(fk))
+        fv=frequency.values()
+        fv=list(fv)
+        #print(fv)
+        fk1,fv1,fkv=[],[],['\t\t\t密码子出现频率:\n\t\t']
+        for i in range(len(fv)):
+            fkv.append(fk[i])
+            fkv.append('  :  ')
+            fkv.append(fv[i])
+            fkv.append('\n\t\t')
+        fkv=''.join(map(str,fkv))
+        print(fkv)
+        self.cw_codon_bias_text.SetValue(fkv)
+        self.cw_codon_bias_text_status.Clear()
+        self.begin_v2=self.cw_codon_bias_text_status.SetValue(self.cw_codon_bias_text.GetValue())
+        
+        """绘图        由于pyinstaller制作exe文件时与matplotlib冲突，故不再使用"""
+        """使得密码子顺序按照A--Z排序"""
+        """
+        color=self.cw_codon_bias_combobox.GetValue()
+        color1=str(color)
+        name1=self.cw_codon_bias_text_status.GetValue()
+        if name1:
+            a1='the frequency and number(the frequency×100) of DNA from '
+            a2='the frequency(green) and number(red) of DNA from '
+            aa1=a1+name1
+            aa2=a2+name1
+            yy=x=range(len(codon))
+            fig=plt.figure(dpi=128,figsize=(25,10))
+            #plt.bar(yy,frequencies,0.3,color='red')
+            plt.bar(yy,number,0.5,color=color1)
+            plt.xlabel('codon',fontsize=16)
+            plt.ylabel(aa2,fontsize=16)
+            plt.title(aa1,fontsize=20)
+            x=range(len(codon))
+            plt.xticks(x,codon,rotation=16)
+            plt.legend('f')
+            plt.savefig("codon_bias.png")
+        else:
+            self.cw_codon_bias_text_status.SetValue('我们将使用默认名称绘图：')
+            yy=x=range(len(codon))
+            fig=plt.figure(dpi=128,figsize=(25,10))
+            #plt.bar(yy,frequencies,0.3,color='red')
+            plt.bar(yy,number,0.5,color='red')
+            plt.xlabel('codon',fontsize=16)
+            plt.ylabel('the number(red) of DNA from Gene',fontsize=16)
+            plt.title('the number of DNA from Gene\n(the frequency×100)',fontsize=20)
+            x=range(len(codon))
+            plt.xticks(x,codon,rotation=16)
+            plt.legend('f')
+            plt.savefig("codon_bias.png")
+        """
+        
+    def On_cw_codon_bias_button_save(self,event):
+        #self.cw_codon_bias_text.SetValue('\t该部分需要用户点击“update”按钮导入CDS序列的txt文本\n\n\t点击“Begin”按钮可以进行cds序列中密码子的偏好性分析\n\n\t但需要在点击前填写基因名称（英文）和选择颜色')
+        with wx.FileDialog(self,"Save file",wildcard="Text file (*.txt)|*.txt",style=wx.FD_SAVE) as fileDialog:
+            if fileDialog.ShowModal()==wx.ID_OK:
+                pathname=fileDialog.GetPath()
+                print(pathname)
+                """这里依然使用open的方法来写文件，使用了GetNumberOfLines()来记录
+                文本的行数，使用GetLineText(i)来得到每一行的文本值"""
+                fp=open(pathname,'w')
+                number1=self.cw_codon_bias_text.GetNumberOfLines()
+                for i in range(number1):
+                    v=self.cw_codon_bias_text_status.GetLineText(i)
+                    fp.write(v)
+                    fp.write('\n')#换行
+                fp.close()#关闭文件
+                
+                        
+    """                    
+    def Onup_button(self,event):
+        #self.up_text.SetValue('请输入genbank文件路径')
+        with wx.FileDialog(self,"Open file",wildcard="Text files (*.gb)|*.gb",style=wx.FD_OPEN|wx.FD_FILE_MUST_EXIST) as fileDialog:
+            if fileDialog.ShowModal()==wx.ID_OK:
+                pathname_up=fileDialog.GetPath()
+        print(pathname_up)
+        
+        global_path1=pathname_up
+        print('global_path\n',str(global_path1))
+        return global_path1
+    """
+    def OnBegin(self,event):
+        #temm=''
+        #listcds=[]
+        total_way1=[]
+        with wx.FileDialog(self,"Open file",wildcard="Text files (*.gb)|*.gb",style=wx.FD_OPEN|wx.FD_FILE_MUST_EXIST) as fileDialog:
+            if fileDialog.ShowModal()==wx.ID_OK:
+                pathname_up=fileDialog.GetPath()
+        print(pathname_up)
+        """
+        pathname_up1='G:\\python_GUI_temp'
+        #创建文件夹
+        os.makedirs(pathname_up1)
+        #文件复制
+        shutil.copy(pathname_up,pathname_up1)
+        self.all_path='G:\\python_GUI_temp\\sequence.gb'
+        #self.up_text.SetValue(' Updated!')
+        """
+         
+        temp_pathname=pathname_up
+        """该部分用于得到：一个CDS中所有碱基段都在一行上的CDS序列（碱基段比较少）"""                
+        filename=temp_pathname
+        with open(filename) as f:
+            for line in f.readlines():
+                if 'CDS' in line:
+                    rule1=re.findall(r'\((.+)\)',line)
+                    if rule1:
+                        print('阶段性测试：碱基段少：\n',str(line))
+                        Re=Return1(line)
+                        temp_total_way1=Re
+                        total_way1=temp_total_way1.way1()
+                        #print('total_way1\n',str(total_way1))
+                    else:
+                        pass
+        f.close()
+        #print('total:\n',str(total_way1))
+        """该部分用于得到：一个CDS中所有碱基段不只在一行上的CDS序列（碱基段比较多）""" 
+        with open(filename) as f1:
+            line2=f1.readlines()
+            #print(line2)
+            """得到碱基段不只一行的cds字符位置"""
+            new2,position_new3=[],[]
+            for s in range(len(line2)):
+                rule1_1=re.findall(r'(,\n)',line2[s])
+                if rule1_1 and ('CDS' in line2[s]) :
+                    #print('tetetetet\n',str(line2[s]))
+                    new2.append(line2[s])
+                    position_new3.append(s)
+                    print('阶段测试组：cds_position\n',str(position_new3))
+                else:
+                    pass
+        """
+        下面部分为：每一条CDS序列的合并
+        """
+        """生成新列表"""
+        position_new2=position_new3
+        lis2= []
+        for i2 in range(int(len(position_new2))):
+            lis2.append([])
+        #print(lis2)
+        """得到碱基段不只一行的所有碱基段位置"""
+        all_line1=[]
+        for m in range(len(position_new2)):
+            all_line=[]
+            all_line.append(line2[position_new2[m]])
+            for m2 in range(1,10):
+                if re.findall(r'(.*\))',line2[position_new2[m]+m2]):
+                    all_line.append(line2[position_new2[m]+m2])
+                else:
+                    break
+            all_line1.append(all_line)#二维列表
+        print('阶段测试组：all_cds\n',str(all_line1))
+        tem11=[]
+        for m3 in range(len(all_line1)):
+            tem=all_line1[m3]
+            tem1=''.join(map(str,tem))
+            tem1=str(tem1)
+            """去掉字符串中空格"""
+            tem1=re.split(r'\s+',tem1)
+            """合并成字符串"""
+            tem1=''.join(map(str,tem1))
+            tem11.append(tem1)
+            #print('阶段测试组：CDS_SEQUENCE\n',str(tem11))
+            """调用方法得到碱基段位置列表"""
+            print('hahahahha\n',str(tem1))
+            Re=Return1(tem1)
+            tem_total_way1=Re
+            total_way1=tem_total_way1.way1()
+        print('total:\n',str(total_way1))
+        """
+        total_way1= [[[1374, 1746], [2804, 2918], [3625, 3898]], [[2822, 2918], [3625, 3772],
+        [5517, 5685]], [[1374, 1393], [1555, 1746], [2804, 2918], [3625, 3772], [5517, 5685]], 
+        [[1374, 1393], [1555, 1746], [2804, 2918], [3625, 3772], [5517, 5685]]]
+        """
+        combine1=Combine(total_way1,temp_pathname)
+        re_combine1=combine1.cdscombine()
+        print('test1:\n',str(re_combine1))
+        #self.text.Clear()#进行清空，防止旧的文件任然在框内显示
+        length=re_combine1[1]
+        print('number of CDS\n',str(length))
+        re_combine1=re_combine1[0]
+        re_combine1=str(re_combine1)
+        str11='该基因一共有CDS序列：\n'
+        str12=str11+str(length)
+        self.text.SetValue(str12)
+        #for cd1 in range(length):
+            
+        self.text.SetValue(re_combine1)
+        #self.up_text.SetValue('END')
+        #self.up_text.Clear()
+        #self.begin_v0=self.up_text.SetValue(self.text.GetValue())
+        
+    def Onopen(self,event):
+        self.text.Clear()
+        print('hello')
+        #self.text.Clear()#进行清空，防止旧的文件任然在框内显示
+        """下面的操作是在窗口中浏览文件并选择打开文件：使用FileDialog。wildcard表示
+        选择文件类型，这里使用Text file （*.txt）|*.txt表示选择txt文件，style后接文件打开和文件必须存在
+        以with状态开始，使用fileDialog.GetPath()得到文件路径"""
+        with wx.FileDialog(self,"Open file",wildcard="Text files (*.gb)|*.gb",style=wx.FD_OPEN|wx.FD_FILE_MUST_EXIST) as fileDialog:
+            if fileDialog.ShowModal()==wx.ID_OK:
+                pathname_open=fileDialog.GetPath()
+                #print(pathname_open)
+                """使用open读入文件，AppendText将列表中所有字符都显示出来，而SetValue是逐行显示
+                最终只显示列表中的最后一个字符"""
+                fp=open(pathname_open,'r')
+                tempstr=fp.readlines()
+                print(tempstr)
+                for line in tempstr:
+                    self.text.AppendText(line)
+        #return pathname_open
+        #self.open_v0=self.up_text.SetValue(self.text.GetValue())
+    
+    def Onsave_menu(self,event):
+        """同样的，如同Onopen一般，使用FileDialog来保存文件"""
+        #self.up_text.SetValue('Saveing... ...')
+        with wx.FileDialog(self,"Save file",wildcard="Text file (*.txt)|*.txt",style=wx.FD_SAVE) as fileDialog:
+            if fileDialog.ShowModal()==wx.ID_OK:
+                pathname=fileDialog.GetPath()
+                print(pathname)
+                """这里依然使用open的方法来写文件，使用了GetNumberOfLines()来记录
+                文本的行数，使用GetLineText(i)来得到每一行的文本值"""
+                r1=re.findall(r'(,)',self.text.GetValue())
+                length=len(r1)+1
+                r2=re.findall(r'\'(\w*)\'',self.text.GetValue())
+                temp_path=pathname#保证了每一条cds都是独立的文件
+                a=".txt"
+                for i in range(length):
+                    pathname=temp_path+str(i+1)+a
+                    print(pathname)
+                    #print('OH shit!\n',str(r2[i]))
+                    self.text.SetValue(r2[i])
+                    fp=open(pathname,'w')
+                    number1=self.text.GetNumberOfLines()
+                    for i in range(number1):
+                        v=self.text.GetLineText(i)
+                        fp.write(v)
+                        #fp.write("\n")#换行
+                    fp.close()#关闭文件
+        #self.up_text.SetValue('Saved!')
+        
+   
+app=wx.App()
+win=MyFrame()
+win.Show()
+app.MainLoop()
