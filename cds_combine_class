@@ -1,0 +1,112 @@
+import re
+class Combine():
+    def __init__(self,total_position,pathname):
+        self.total_position=total_position
+        self.pathname=pathname
+    def cdscombine(self):
+        """
+        。。。提 。。。取 。。。C 。。。D 。。。S。。。序 。。。列。。。
+        """
+        #print("the program will help to get the CDS sequence of DNA from FASTA\n\n\a")
+        cds=[]
+        contents10=[]
+        contents12=[]
+        tem=[]
+        s=[]
+        temm=''
+        """
+        filename='sequence.fasta'
+        with open(filename) as f:
+            for line in f:
+                if '>' in line:
+                    pass
+                    #print('This is Head of the File\n',str(line))
+                else:
+                    temm=temm+line.strip()
+                    print('ooooooooooo\n\n',temm)
+        cds.append(temm)
+        """
+        filename=self.pathname
+        with open(filename) as f1:
+            line2=f1.readlines()
+            #print(line2)
+            """得到碱基段不只一行的cds字符位置"""
+            new2,position_new3=[],[]
+            for s in range(len(line2)):
+                #rule1_1=re.findall(r'(,\n)',line2[s])
+                if ('ORIGIN' in line2[s]) :
+                    #print('tetetetet\n',str(line2[s]))
+                    new2.append(line2[s])
+                    position_new3.append(s)
+                    #print('阶段测试组：cds_position\n',str(position_new3))
+                else:
+                    pass
+            all_dna=[]  
+            aa=int(position_new3[0])
+            for ss in range(aa+1,len(line2)):
+                #print(line2[ss])
+                all_dna.append(line2[ss])
+            #print(all_dna)
+            #print(len(all_dna))
+            cds,se=[],[]
+            for pp in range(len(all_dna)):
+                temp=[]
+                temp.append(all_dna[pp])
+         
+                for w in range(len(temp)):
+                    sd=str(temp[w])
+                    #print(sd)
+                    rule=re.findall(r'(["a","t","c","g"])',sd)
+                    #print(rule)
+                    e=rule
+                    ee=''.join(map(str,e))
+                    #print('ss\n',str(ee))
+                    se.append(ee)
+            
+            se1=''.join(map(str,se))
+            cds.append(se1)
+    
+        print('totalDNA\n',str(cds))
+        for i in range(0,len(cds)):
+            s=cds[i]
+            tem.append(s)
+            i+=1
+        for i in tem:
+            contents10.append(list(i))
+            contents11=contents10[0]
+        #print("the sequence1 was:\n",str(contents11))
+        contents12=[]
+        temp_contents12=[]
+        temp_contents13=[]
+        tt=[]
+        
+        position1=self.total_position
+        #print('test\n',str(position1))
+        for m1 in range(len(position1)):
+            temp_position=position1[m1]
+            for i in range(len(temp_position)):
+                """生成新列表"""
+                lis= []
+                for k in range(int(len(temp_position))):
+                    lis.append([])
+                begin=temp_position[i][0]
+                end=temp_position[i][1]
+                lis[i]=contents11[begin:end]
+                temp_contents12.extend(lis[i])
+                #print('Test\n',str(temp_contents12))
+                
+             
+            """这里是将多个元素的一维列表变为一个元素的列表，便于输出到txt文本"""
+            ttt=[] #记录CDS序列
+            """将合并好的元素加入新列表，这时该列表只有一个元素"""
+            ttt=''.join(map(str,temp_contents12))
+            #print(ttt)
+            print(len(ttt))
+            tt.append(ttt)
+            length=len(position1)
+            temp_contents12.clear()
+        ttt=list(ttt)
+        ttt.clear()
+        print(tt)
+        return tt,length
+    """返回四条cds字符串组成的列表"""
