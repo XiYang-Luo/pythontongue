@@ -1,0 +1,68 @@
+"""
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+该部分的作用是导入sequence.gb文件，返回文件中每一条CDS序列的起始位置和终止位置，成对出现，
+前一个为起点后一个为终点。[[[1374, 1746], [2804, 2918], [3625, 3898]]]既是表示条CDS ，1374，
+2804，3625表示起点，1746，2918，3898表示终点
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+"""
+import re
+temm=''
+listcds=[]
+total_way1,total2=[],[]
+class Return1():
+    def __init__(self,line1):
+        self.line1=line1
+    def way1(self):
+        global total2
+        line=self.line1
+        line=str(line)
+            
+        listcds1=[]
+        listcds.append(line)#记录总的
+        listcds1.append(line)#记录每一次的
+        """匹配得到cds的所有碱基段"""
+        rule2=re.findall(r'\((.+)',listcds1[0])
+        print('得到的cds粗品：\n',str(rule2))
+        """匹配的到一个cds碱基段的总数目"""
+        rule3=re.findall(r'(,)',rule2[0])
+        #print('得到的逗号',str(rule3))
+        cds_number=len(rule3)+1
+        print('cds碱基段数：\n',cds_number)
+        """得到所有碱基段在总序列中的位置"""
+        rule4=re.findall(r'([0-9]*)',rule2[0])
+        #print(rule4)
+        list_rule4=[]
+        cds_begin_position,cds_end_position=[],[]
+        for i in range(len(rule4)):
+            """得到全是碱基位置组成的列表（去掉‘，’）"""
+            if rule4[i] not in r'(,)':
+                list_rule4.append(rule4[i])
+        #print('cdslist\n',str(list_rule4))
+        """将所有碱基段开始位置减一"""
+        for k in range(len(list_rule4)):
+            if k%2==0:
+                temp=int(list_rule4[k])
+                temp=temp - 1
+                """得到一段cds中开始位置"""
+                cds_begin_position.append(temp)
+        for k1 in range(len(list_rule4)):
+            if k1%2!=0:
+                temp1=int(list_rule4[k1])
+                """得到一段cds中结束位置"""
+                cds_end_position.append(temp1)
+        #print(cds_begin_position)
+        #print(cds_end_position)
+        """生成新列表"""
+        lis= []
+        for i in range(int(len(list_rule4)/2)):
+            lis.append([])
+        """将cds段的两端位置导入列表"""
+        for n in range(int(len(list_rule4)/2)):
+            lis[n].append(cds_begin_position[n])
+            lis[n].append(cds_end_position[n])
+        total2.append(lis)     
+        return total2
+
+
+
+
