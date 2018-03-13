@@ -1,0 +1,113 @@
+# java project
+java_for_cds_from_genbank
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+public class CDS extends JFrame{
+	//设置基本组件
+	private ImageIcon CDSButtonic = new ImageIcon("E:/2017year-study/2017_study_下学期/pythonGUI/project_one_test/CDS.png");
+	private ImageIcon AminoButtonic = new ImageIcon("E:/2017year-study/2017_study_下学期/pythonGUI/project_one_test/Amino.png");
+	private ImageIcon CFButtonic = new ImageIcon("E:/2017year-study/2017_study_下学期/pythonGUI/project_one_test/CodonFrequency.png");
+	
+	JMenuBar mainmenubar = new JMenuBar();//菜单栏
+	JMenu mainmenu = new JMenu("File(F)");//菜单
+	JMenu helpmenu = new JMenu("Help(H)");
+	JMenuItem mainmenusave = new JMenuItem("Save(S)");//菜单选项
+	JMenuItem mainmenuopen = new JMenuItem("Open(O)");
+	JMenuItem mainmenuquit = new JMenuItem("Quit(Q)");
+	JMenuItem menuhelp = new JMenuItem("Help(H)");
+	
+	
+	JTextArea MainText = new JTextArea();
+	//JTextField ShowText = new JTextField();
+	JButton CDSButton = new JButton(CDSButtonic);
+	JButton AminoButton =  new JButton(AminoButtonic);
+	JButton CFButton = new JButton(CFButtonic);
+	public CDS(){
+		CDSButton.setBackground(Color.WHITE);
+		AminoButton.setBackground(Color.WHITE);
+		CFButton.setBackground(Color.WHITE);
+		
+		mainmenu.add(mainmenuopen);
+		mainmenu.add(mainmenusave);
+		mainmenu.add(mainmenuquit);//添加选项到菜单
+		helpmenu.add(menuhelp);
+		mainmenubar.add(mainmenu);//添加菜单到菜单栏
+		mainmenubar.add(helpmenu);
+		setJMenuBar(mainmenubar);//设置菜单栏到面板
+		
+		JPanel j1= new JPanel(new GridLayout(15,1,10,10));
+	    JPanel j2= new JPanel();
+	    j1.setBackground(Color.WHITE);
+	    j2.setBackground(Color.WHITE);
+	    MainText.setBounds(new Rectangle(10,10,1300,830));
+	    j2.setLayout(null);
+	    add(MainText);
+	    //分割窗口
+	    JSplitPane splitPane=new JSplitPane();//创建一个分割容器类
+	    splitPane.setOneTouchExpandable(true);//让分割线显示出箭头
+	    splitPane.setContinuousLayout(true);//操作箭头，重绘图形
+	    splitPane.setOrientation(JSplitPane.HORIZONTAL_SPLIT);//设置分割线方向 纵向分布
+	    splitPane.setLeftComponent(j1);//设置左边的组件
+	    splitPane.setRightComponent(j2);//设置右边的组件
+	    splitPane.setDividerSize(10);//设置分割线的大小
+	    splitPane.setDividerLocation(0.6);//设置分割线位于中央
+	    //添加组件
+	    j1.add(CDSButton);
+	    j1.add(AminoButton);
+	    j1.add(CFButton);
+	    
+	    j2.add(MainText);
+	    //设置到面板
+	    setContentPane(splitPane);//是把splitPane设置为内容面板
+	    
+	    CDSButton.addActionListener(new CDSButtonAction());
+	    AminoButton.addActionListener(new AminoButtonAction());
+	    CFButton.addActionListener(new CFButtonAction());
+	    
+	    menuhelp.addActionListener(new menuhelpAction());
+		
+	}
+	//响应函数
+	
+	class CDSButtonAction implements ActionListener{
+		public void actionPerformed(ActionEvent e){
+			System.out.println("This is BUtton for CDS Sequence");
+			String cds = MainText.getText();
+			System.out.println(cds);
+		}
+	}
+	
+	class AminoButtonAction implements ActionListener{
+		public void actionPerformed(ActionEvent e){
+			System.out.println("This is BUtton for Amino Sequence");
+			
+		}
+	}
+	
+	class CFButtonAction implements ActionListener{
+		public void actionPerformed(ActionEvent e){
+			System.out.println("This is BUtton for Codon Frequency ");
+			
+		}
+	}
+	
+	class menuhelpAction implements ActionListener{
+		public void actionPerformed(ActionEvent e){
+			System.out.println("This is Menu for help");
+		}
+	}
+	
+	
+	public static void main(String[] args){
+		JFrame frame = new CDS();
+		frame.setTitle("Biology Tools");
+		frame.setSize(1500,900);
+		frame.setLocationRelativeTo(null);
+		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		//frame.setContentPane(splitPane);
+	    //frame.pack(),这个函数的作用就是根据窗口里面的布局及组件的preferedSize来确定frame的最佳大小。
+		frame.setVisible(true);
+	}
+
+}
